@@ -3,6 +3,6 @@
 
 typedef double (*Function)(double);
 
-
+double area(Function f, double a, double b, double epsilon);
 
 #endif
