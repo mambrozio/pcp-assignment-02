@@ -4,12 +4,12 @@
 
 CC := mpicc
 
-CFLAGS := -Wall
+CFLAGS := -Wall -lm
 
 main: objs
 	@- $(CC) $(CFLAGS) obj/function.o obj/main.o -o bin/main
 
-objs:	
+objs:
 	@- $(CC) $(CFLAGS) -c src/function.c -o obj/function.o
 	@- $(CC) $(CFLAGS) -c src/main.c -o obj/main.o
 

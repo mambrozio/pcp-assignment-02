@@ -1,5 +1,7 @@
 #include "function.h"
 
+#include <stdlib.h>
+
 static double area_trapezoid(double b1, double b2, double h);
 
 double area(Function f, double a, double b, double epsilon) {
@@ -14,7 +16,7 @@ double area(Function f, double a, double b, double epsilon) {
     double right_trapezoid = area_trapezoid(fc, fb, b - c);
 
     double divided_trapezoid = left_trapezoid + right_trapezoid;
-    double diff = trapezoid - divided_trapezoid;
+    double diff = abs(trapezoid - divided_trapezoid);
 
     if (diff > epsilon) {
         return area(f, a, c, epsilon) + area(f, c, b, epsilon);
