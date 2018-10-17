@@ -7,12 +7,14 @@
 #include "list.h"
 
 #define EPSILON 0.0000000000000001
-#define EMPTY 0
+#define NOT_WAITING 0
+#define WAITING 1
 
 // TAGS
-#define TAG_WANT_INTERVAL  3//Calculating node wants interval from master
-#define TAG_PARTIAL_RESULT 5//Calculating node sends partial result to master
-#define TAG_NEW_INTERVAL   7//Calculating node sends new interval to master
+#define TAG_WANT_INTERVAL    3//Calculating node wants interval from master
+#define TAG_PARTIAL_RESULT   5//Calculating node sends partial result to master
+#define TAG_NEW_INTERVAL     7//Calculating node sends new interval to master
+#define TAG_RECEIVE_INTERVAL 9//Master sends new interval to calculating node
 
 typedef struct Message {
     double a;
@@ -60,19 +62,22 @@ int main(int argc, char** argv) {
 void master() {
     MPI_Status status;
     unsigned waiting[no_processes];
+    unsigned splits = no_processes - 1;
     Message msg;
     List* intervals = list_new();
-    Interval interval;
+    Interval* interval;
+    double result = 0.0;
 
     for (int i = 0; i < no_processes; i++) {
-        waiting[i] = EMPTY;
+        waiting[i] = NOT_WAITING;
     }
 
     double size = (b - a) / no_processes;
     for (int i = 0; i < no_processes - 1; i++) {
-        interval.a = (double)i * size;
-        interval.b = ((double)i + 1) * size;
-        list_append(intervals, interval);
+        MALLOC(interval, Interval);
+        interval->a = (double)i * size;
+        interval->b = ((double)i + 1) * size;
+        list_append(intervals, (ListValue)interval);
     }
 
     for(;;) {
@@ -82,21 +87,55 @@ void master() {
         switch (status.MPI_TAG) {
             //if tag is get_interval, send next interval (protect buffer?)
             case TAG_WANT_INTERVAL:
+                int from = status.MPI_SOURCE;
+                if (list_size(intervals) == 0) { //intervals empty, put in waiting
+                    waiting[from] = WAITING;
+                } else { //not empty, send interval
+                    Interval* itv = (Interval)list_pop_first(intervals);
+                    msg.a = itv->a;
+                    msg.b = itv->b;
+                    msg.res = 0.0;
+                    MPI_Send(&msg, 1, mpi_dt_message, from, TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
+                }
                 break;
             //if tag is partial_result, sum to partial result variable and sum the intervals
             case TAG_PARTIAL_RESULT:
+                int from = status.MPI_SOURCE;
+                result += msg.res;
+                splits--;
                 break;
             //if tag is new_interval, insert new_interval in intervals list
             case TAG_NEW_INTERVAL:
+                int from = status.MPI_SOURCE;
+                Interval* itv;
+                MALLOC(itv, Interval);
+                itv->a = msg.a;
+                itv->b = msg.b;
+                list_append(intervals, (ListValue)itv);
+                splits++;
                 break;
             default:
                 fprintf(stderr, "Node %d sent unknown tag %d\n", status.MPI_SOURCE, status.MPI_TAG);
                 break;
         }
+        //if has someone waiting, send interval is intervals not empty
+        for (int i = 0; i < no_processes; i++) {
+            if (waiting[i] == WAITING && list_size(intervals) != 0) {
+                Interval* itv = (Interval)list_pop_first(intervals);
+                msg.a = itv->a;
+                msg.b = itv->b;
+                msg.res = 0.0;
+                MPI_Send(&msg, 1, mpi_dt_message, i, TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
+            }
+        }
 
         //if all intervals were calculated, send message to all nodes to terminate
+        if (splits == 0) {
+            break;
+        }
     }
 
+    printf("Result %.25f\n", result);
     return;
 }
 
@@ -108,6 +147,7 @@ void calculate() {
         //calculate interval
         //if split is needed, make new interval, send one to master, update current interval
         //else, send result to master and clean current interval
+        MPI_Send()
     }
 
     return;
