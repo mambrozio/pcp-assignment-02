@@ -15,14 +15,14 @@
 #define TAG_NEW_INTERVAL   7//Calculating node sends new interval to master
 
 typedef struct Message {
-    int a;
-    int b;
+    double a;
+    double b;
     double res;
 } Message;
 
 typedef struct Interval {
-    int a;
-    int b;
+    double a;
+    double b;
 } Interval;
 
 void master();
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
     // Create new mpi type for struct Message
     MPI_Datatype mpi_dt_message;
-    MPI_Type_create_struct(3, {MPI_INT, MPI_INT, MPI_DOUBLE}, {1, 1, 1},
+    MPI_Type_create_struct(3, {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE}, {1, 1, 1},
         {offsetof(Message, a), offsetof(Message, b), offsetof(Message, res)},
         &mpi_dt_message);
 
@@ -68,9 +68,10 @@ void master() {
         waiting[i] = EMPTY;
     }
 
+    double size = (b - a) / no_processes;
     for (int i = 0; i < no_processes - 1; i++) {
-        interval.a = (init_interval * i) + (end_interval / (no_processes - 1));
-        interval.b = 0;
+        interval.a = (double)i * size;
+        interval.b = ((double)i + 1) * size;
         list_append(intervals, interval);
     }
 
