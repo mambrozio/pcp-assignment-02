@@ -19,6 +19,11 @@ typedef struct Message {
     double res;
 } Message;
 
+typedef struct Interval {
+    int a;
+    int b;
+} Interval;
+
 void master();
 void calculate();
 
@@ -60,13 +65,24 @@ void master() {
     }
 
     for(;;) {
-        //receive any tag
+        // Receive any tag
         MPI_Recv(&msg, mpi_dt_message, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-        
-        //if tag is get_interval, send next interval (protect buffer?)
-        //if tag is partial_result, sum to partial result variable and sum the intervals
-        //if tag is new_interval, insert new_interval in intervals list
+        switch (status.MPI_TAG) {
+            //if tag is get_interval, send next interval (protect buffer?)
+            case TAG_WANT_INTERVAL:
+                break;
+            //if tag is partial_result, sum to partial result variable and sum the intervals
+            case TAG_PARTIAL_RESULT:
+                break;
+            //if tag is new_interval, insert new_interval in intervals list
+            case TAG_NEW_INTERVAL:
+                break;
+            default:
+                fprintf(stderr, "Node %d sent unknown tag %d\n", status.MPI_SOURCE, status.MPI_TAG);
+                break;
+        }
+
         //if all intervals were calculated, send message to all nodes to terminate
     }
 
