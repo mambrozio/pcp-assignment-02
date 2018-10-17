@@ -1,11 +1,15 @@
 /**/
 
 #include <assert.h>
-#include <stdio.h>
-#include <stddef.h> //ofsetof
+#include <math.h>
 #include <mpi.h>
+#include <stddef.h> //ofsetof
+#include <stdio.h>
 
+#include "../area.h"
 #include "list.h"
+
+#include "../weird.c"
 
 #define EPSILON 0.0000000000000001
 #define NOT_WAITING 0
@@ -17,19 +21,22 @@
 #define TAG_NEW_INTERVAL     7//Calculating node sends new interval to master
 #define TAG_RECEIVE_INTERVAL 9//Master sends new interval to calculating node
 
+#define MASTER 0
+
+#define SEND(m, tag, to) \
+    MPI_Send(&m, 1, mpi_dt_message, to, tag, MPI_COMM_WORLD)
+
+#define RECEIVE(m, tag, s) \
+    MPI_Recv(&m, 1, mpi_dt_message, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &s)
+
 typedef struct Message {
     double a;
     double b;
     double res;
 } Message;
 
-typedef struct Interval {
-    double a;
-    double b;
-} Interval;
-
-void master();
-void calculate();
+static void master(double, double);
+static void worker(void);
 
 /* Global variables */
 int rank;
@@ -60,7 +67,7 @@ int main(int argc, char** argv) {
     if (rank == 0) { /* Master node */
         master(lower_bound, upper_bound);
     } else { /* Calculating nodes */
-        calculate();
+        worker();
     }
 
     MPI_Finalize();
@@ -68,7 +75,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void master(double a, double b) {
+static void master(double a, double b) {
     MPI_Status status;
     unsigned waiting[no_processes];
     unsigned splits = no_processes - 1;
@@ -105,11 +112,13 @@ void master(double a, double b) {
                     msg.a = itv->a;
                     msg.b = itv->b;
                     msg.res = 0.0;
-                    MPI_Send(&msg, 1, mpi_dt_message, from, TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
+                    MPI_Send(&msg, 1, mpi_dt_message, from,
+                        TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
                 }
                 break;
             }
-            //if tag is partial_result, sum to partial result variable and sum the intervals
+            //if tag is partial_result, sum to partial result variable and sum
+            //the intervals
             case TAG_PARTIAL_RESULT:
                 result += msg.res;
                 splits--;
@@ -125,7 +134,8 @@ void master(double a, double b) {
                 break;
             }
             default:
-                fprintf(stderr, "Node %d sent unknown tag %d\n", status.MPI_SOURCE, status.MPI_TAG);
+                fprintf(stderr, "Node %d sent unknown tag %d\n",
+                    status.MPI_SOURCE, status.MPI_TAG);
                 break;
         }
         //if has someone waiting, send interval is intervals not empty
@@ -135,11 +145,13 @@ void master(double a, double b) {
                 msg.a = itv->a;
                 msg.b = itv->b;
                 msg.res = 0.0;
-                MPI_Send(&msg, 1, mpi_dt_message, i, TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
+                MPI_Send(&msg, 1, mpi_dt_message, i, TAG_RECEIVE_INTERVAL,
+                    MPI_COMM_WORLD);
             }
         }
 
-        //if all intervals were calculated, send message to all nodes to terminate
+        //if all intervals were calculated, send message to all nodes to
+        //terminate
         if (splits == 0) {
             break;
         }
@@ -149,14 +161,33 @@ void master(double a, double b) {
     return;
 }
 
-void calculate() {
-    // MPI_Status status;
+static void worker(void) {
+    Interval* interval = NULL;
+    Message msg;
+    MPI_Status status;
 
     for(;;) {
-        //check if asking for interval is needed
-        //calculate interval
-        //if split is needed, make new interval, send one to master, update current interval
-        //else, send result to master and clean current interval
+        if (!interval) {
+            SEND(msg, TAG_WANT_INTERVAL, MASTER);
+            RECEIVE(msg, TAG_RECEIVE_INTERVAL, status);
+            interval->a = msg.a;
+            interval->b = msg.b;
+        }
+
+        double result = calculate_area_partially(exp, interval, EPSILON);
+
+        if (result == INFINITY) {
+            double c = (interval->b - interval->a) / 2.0;
+            msg.a = c;
+            msg.b = interval->b;
+            SEND(msg, TAG_NEW_INTERVAL, MASTER);
+            interval->b = c;
+        } else {
+            msg.res = result;
+            SEND(msg, TAG_PARTIAL_RESULT, MASTER);
+            free(interval);
+            interval = NULL;
+        }
     }
 
     return;
