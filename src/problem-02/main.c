@@ -1,5 +1,6 @@
 /**/
 
+#include <assert.h>
 #include <stdio.h>
 #include <stddef.h> //ofsetof
 #include <mpi.h>
@@ -35,6 +36,7 @@ int rank;
 int no_processes; //need to be global so master can access to create waiting_queue
 int init_interval = 0;
 int end_interval = 10;
+MPI_Datatype mpi_dt_message;
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -46,10 +48,14 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     // Create new mpi type for struct Message
-    MPI_Datatype mpi_dt_message;
-    MPI_Type_create_struct(3, {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE}, {1, 1, 1},
-        {offsetof(Message, a), offsetof(Message, b), offsetof(Message, res)},
-        &mpi_dt_message);
+    MPI_Datatype datatypes[] = {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
+    int lengths[] = {1, 1, 1};
+    MPI_Aint offsets[] = {
+        offsetof(Message, a),
+        offsetof(Message, b),
+        offsetof(Message, res)
+    };
+    MPI_Type_create_struct(3, lengths, offsets, datatypes, &mpi_dt_message);
 
     if (rank == 0) { /* Master node */
         master(lower_bound, upper_bound);
@@ -85,11 +91,12 @@ void master(double a, double b) {
 
     for(;;) {
         // Receive any tag
-        MPI_Recv(&msg, mpi_dt_message, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(&msg, 1, mpi_dt_message, MPI_ANY_SOURCE, MPI_ANY_TAG,
+            MPI_COMM_WORLD, &status);
 
         switch (status.MPI_TAG) {
             //if tag is get_interval, send next interval (protect buffer?)
-            case TAG_WANT_INTERVAL:
+            case TAG_WANT_INTERVAL: {
                 int from = status.MPI_SOURCE;
                 if (list_size(intervals) == 0) { //intervals empty, put in waiting
                     waiting[from] = WAITING;
@@ -101,15 +108,14 @@ void master(double a, double b) {
                     MPI_Send(&msg, 1, mpi_dt_message, from, TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
                 }
                 break;
+            }
             //if tag is partial_result, sum to partial result variable and sum the intervals
             case TAG_PARTIAL_RESULT:
-                int from = status.MPI_SOURCE;
                 result += msg.res;
                 splits--;
                 break;
             //if tag is new_interval, insert new_interval in intervals list
-            case TAG_NEW_INTERVAL:
-                int from = status.MPI_SOURCE;
+            case TAG_NEW_INTERVAL: {
                 Interval* itv;
                 MALLOC(itv, Interval);
                 itv->a = msg.a;
@@ -117,6 +123,7 @@ void master(double a, double b) {
                 list_append(intervals, (ListValue)itv);
                 splits++;
                 break;
+            }
             default:
                 fprintf(stderr, "Node %d sent unknown tag %d\n", status.MPI_SOURCE, status.MPI_TAG);
                 break;
@@ -143,7 +150,7 @@ void master(double a, double b) {
 }
 
 void calculate() {
-    MPI_Status status;
+    // MPI_Status status;
 
     for(;;) {
         //check if asking for interval is needed
