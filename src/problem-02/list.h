@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 
-#include "rams.h"
+#include "allocation.h"
+
+typedef const char* (*StringifyFunction)(void*);
 
 typedef struct List List;
 typedef struct ListNode ListNode;
@@ -17,6 +19,7 @@ extern ListNode* list_first(List*);
 extern ListNode* list_last(List*);
 
 extern void list_append(List*, ListValue);
+extern ListValue list_pop_first(List*);
 extern bool list_contains(List*, ListValue);
 
 extern ListValue list_value(ListNode*);

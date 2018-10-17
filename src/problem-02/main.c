@@ -37,8 +37,11 @@ int init_interval = 0;
 int end_interval = 10;
 
 int main(int argc, char** argv) {
-
     MPI_Init(&argc, &argv);
+    assert(argc == 3);
+    double lower_bound = strtod(argv[1], NULL);
+    double upper_bound = strtod(argv[2], NULL);
+
     MPI_Comm_size(MPI_COMM_WORLD, &no_processes);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -49,9 +52,9 @@ int main(int argc, char** argv) {
         &mpi_dt_message);
 
     if (rank == 0) { /* Master node */
-        master();
+        master(lower_bound, upper_bound);
     } else { /* Calculating nodes */
-        calculate()
+        calculate();
     }
 
     MPI_Finalize();
@@ -59,7 +62,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void master() {
+void master(double a, double b) {
     MPI_Status status;
     unsigned waiting[no_processes];
     unsigned splits = no_processes - 1;
@@ -91,7 +94,7 @@ void master() {
                 if (list_size(intervals) == 0) { //intervals empty, put in waiting
                     waiting[from] = WAITING;
                 } else { //not empty, send interval
-                    Interval* itv = (Interval)list_pop_first(intervals);
+                    Interval* itv = (Interval*)list_pop_first(intervals);
                     msg.a = itv->a;
                     msg.b = itv->b;
                     msg.res = 0.0;
@@ -121,7 +124,7 @@ void master() {
         //if has someone waiting, send interval is intervals not empty
         for (int i = 0; i < no_processes; i++) {
             if (waiting[i] == WAITING && list_size(intervals) != 0) {
-                Interval* itv = (Interval)list_pop_first(intervals);
+                Interval* itv = (Interval*)list_pop_first(intervals);
                 msg.a = itv->a;
                 msg.b = itv->b;
                 msg.res = 0.0;
@@ -147,7 +150,6 @@ void calculate() {
         //calculate interval
         //if split is needed, make new interval, send one to master, update current interval
         //else, send result to master and clean current interval
-        MPI_Send()
     }
 
     return;
