@@ -105,5 +105,5 @@ void list_dump(List* list, StringifyFunction stringify) {
         e = list_next(e);
         printf("%s%s", stringify(value), e ? ", " : "");
     }
-    printf("]");
+    printf("]\n");
 }

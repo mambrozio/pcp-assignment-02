@@ -38,6 +38,14 @@ typedef struct Message {
 static void master(double, double);
 static void worker(void);
 
+static const char* interval_stringfy(void* value) {
+    Interval* interval = (Interval*)value;
+    char* str;
+    MALLOC_ARRAY(str, char, 100);
+    sprintf(str, "[%f, %f]", interval->a, interval->b);
+    return str;
+}
+
 /* Global variables */
 int rank;
 int no_processes; //need to be global so master can access to create waiting_queue
@@ -55,14 +63,15 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     // Create new mpi type for struct Message
-    MPI_Datatype datatypes[] = {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
     int lengths[] = {1, 1, 1};
     MPI_Aint offsets[] = {
         offsetof(Message, a),
         offsetof(Message, b),
         offsetof(Message, res)
     };
+    MPI_Datatype datatypes[] = {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
     MPI_Type_create_struct(3, lengths, offsets, datatypes, &mpi_dt_message);
+    MPI_Type_commit(&mpi_dt_message);
 
     if (rank == 0) { /* Master node */
         master(lower_bound, upper_bound);
@@ -75,7 +84,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-static void master(double a, double b) {
+static void master(double lower_bound, double upper_bound) {
     MPI_Status status;
     unsigned waiting[no_processes];
     unsigned splits = no_processes - 1;
@@ -88,13 +97,15 @@ static void master(double a, double b) {
         waiting[i] = NOT_WAITING;
     }
 
-    double size = (b - a) / no_processes;
+    double size = (upper_bound - lower_bound) / (no_processes - 1);
     for (int i = 0; i < no_processes - 1; i++) {
         MALLOC(interval, Interval);
-        interval->a = (double)i * size;
-        interval->b = ((double)i + 1) * size;
+        interval->a = lower_bound + rank * size;;
+        interval->b = lower_bound + (rank + 1.0) * size;
         list_append(intervals, (ListValue)interval);
     }
+
+    list_dump(intervals, interval_stringfy);
 
     for(;;) {
         // Receive any tag
@@ -112,6 +123,7 @@ static void master(double a, double b) {
                     msg.a = itv->a;
                     msg.b = itv->b;
                     msg.res = 0.0;
+                    printf("send %f %f %f\n", msg.a, msg.b, msg.res);
                     MPI_Send(&msg, 1, mpi_dt_message, from,
                         TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
                 }
@@ -150,6 +162,8 @@ static void master(double a, double b) {
             }
         }
 
+        // printf("splits: %d\n", splits);
+
         //if all intervals were calculated, send message to all nodes to
         //terminate
         if (splits == 0) {
@@ -170,10 +184,14 @@ static void worker(void) {
         if (!interval) {
             SEND(msg, TAG_WANT_INTERVAL, MASTER);
             RECEIVE(msg, TAG_RECEIVE_INTERVAL, status);
+            MALLOC(interval, Interval);
             interval->a = msg.a;
             interval->b = msg.b;
+
+            printf("receive %f %f %f\n", msg.a, msg.b, msg.res);
         }
 
+        // printf("[a, b] [%d, %d]\n", interval->a, interval->b);
         double result = calculate_area_partially(exp, interval, EPSILON);
 
         if (result == INFINITY) {
@@ -185,6 +203,7 @@ static void worker(void) {
         } else {
             msg.res = result;
             SEND(msg, TAG_PARTIAL_RESULT, MASTER);
+            printf("Enviei\n");
             free(interval);
             interval = NULL;
         }

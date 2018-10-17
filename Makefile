@@ -24,7 +24,7 @@ run1: clean p1
 	@- mpirun -np 2 bin/main1 -3 2
 
 run2: clean p2
-	@- mpirun -np 2 bin/main2 -3 2
+	@- mpirun --oversubscribe -np 4 bin/main2 -3 2
 
 clean:
 	@- rm -f obj/*.o
