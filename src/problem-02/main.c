@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 #include <stddef.h> //ofsetof
+#include <mpi.h>
 
-#include "mpi.h"
+#include "list.h"
 
 #define EPSILON 0.0000000000000001
 #define EMPTY 0
@@ -30,6 +31,8 @@ void calculate();
 /* Global variables */
 int rank;
 int no_processes; //need to be global so master can access to create waiting_queue
+int init_interval = 0;
+int end_interval = 10;
 
 int main(int argc, char** argv) {
 
@@ -58,10 +61,17 @@ void master() {
     MPI_Status status;
     unsigned waiting[no_processes];
     Message msg;
+    List* intervals = list_new();
+    Interval interval;
 
-    //initialize arrays
     for (int i = 0; i < no_processes; i++) {
         waiting[i] = EMPTY;
+    }
+
+    for (int i = 0; i < no_processes - 1; i++) {
+        interval.a = (init_interval * i) + (end_interval / (no_processes - 1));
+        interval.b = 0;
+        list_append(intervals, interval);
     }
 
     for(;;) {
