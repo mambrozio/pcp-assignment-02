@@ -41,7 +41,7 @@ double calculate_area_partially(Function f, Interval* i, double epsilon) {
 
     double diff = fabs(undivided_trapezoid - divided_trapezoid);
 
-    return (diff > epsilon) ? INFINITY : divided_trapezoid;
+    return (diff > epsilon) ? NAN : divided_trapezoid;
 }
 
 // ==================================================

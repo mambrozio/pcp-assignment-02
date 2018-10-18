@@ -130,7 +130,7 @@ static void master(double lower_bound, double upper_bound) {
                     msg.a = itv->a;
                     msg.b = itv->b;
                     msg.res = 0.0;
-                    printf("send %f %f %f\n", msg.a, msg.b, msg.res);
+                    // printf("send %f %f %f\n", msg.a, msg.b, msg.res);
                     MPI_Send(&msg, 1, mpi_dt_message, from,
                         TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
                 }
@@ -194,23 +194,21 @@ static void worker(void) {
             MALLOC(interval, Interval);
             interval->a = msg.a;
             interval->b = msg.b;
-
-            printf("receive %f %f %f\n", msg.a, msg.b, msg.res);
         }
-
-        // printf("[a, b] [%d, %d]\n", interval->a, interval->b);
         double result = calculate_area_partially(exp, interval, EPSILON);
 
-        if (result == INFINITY) {
-            double c = (interval->b - interval->a) / 2.0;
+        if (isnan(result)) {
+            //printf("INFINITY\n");
+            double c = (interval->b + interval->a) / 2.0;
             msg.a = c;
             msg.b = interval->b;
+            // printf("send %f %f %f\n", msg.a, msg.b, msg.res);
             SEND(msg, TAG_NEW_INTERVAL, MASTER);
             interval->b = c;
         } else {
+            // printf("NOT INFINITY\n");
             msg.res = result;
             SEND(msg, TAG_PARTIAL_RESULT, MASTER);
-            printf("Enviei\n");
             free(interval);
             interval = NULL;
         }
