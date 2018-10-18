@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
         worker();
     }
 
+    MPI_Type_free(&mpi_dt_message);
     MPI_Finalize();
 
     if (rank == 0) {

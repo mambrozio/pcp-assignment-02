@@ -97,6 +97,7 @@ int main(int argc, char** argv) {
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Type_free(&mpi_dt_message);
     MPI_Finalize();
 
     if (rank == 0) {
