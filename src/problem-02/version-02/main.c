@@ -7,20 +7,21 @@
 #include <stddef.h> //ofsetof
 #include <stdio.h>
 
-#include "../area.h"
-#include "list.h"
+#include "../../area.h"
+#include "../list.h"
 
-#include "../weird.c"
+#include "../../weird.c"
 
 #define EPSILON 0.0000000000000001
 #define NOT_WAITING 0
 #define WAITING 1
 
 // TAGS
-#define TAG_WANT_INTERVAL    3 //Calculating node wants interval from master
-#define TAG_PARTIAL_RESULT   5 //Calculating node sends partial result to master
-#define TAG_NEW_INTERVAL     7 //Calculating node sends new interval to master
-#define TAG_RECEIVE_INTERVAL 9 //Master sends new interval to calculating node
+#define TAG_WANT_INTERVAL     3 //Worker node wants interval from master
+#define TAG_PARTIAL_RESULT    5 //Worker node sends partial result to master
+#define TAG_NEW_INTERVAL      7 //Worker node sends new interval to master
+#define TAG_RECEIVE_INTERVAL  9 //Master sends new interval to calculating node
+#define TAG_KILL_YOURSELF    11 //End worker nodes
 
 #define MASTER 0
 
@@ -39,13 +40,13 @@ typedef struct Message {
 static void master(double, double);
 static void worker(void);
 
-static const char* interval_stringfy(void* value) {
-    Interval* interval = (Interval*)value;
-    char* str;
-    MALLOC_ARRAY(str, char, 100);
-    sprintf(str, "[%f, %f]", interval->a, interval->b);
-    return str;
-}
+// static const char* interval_stringfy(void* value) {
+//     Interval* interval = (Interval*)value;
+//     char* str;
+//     MALLOC_ARRAY(str, char, 100);
+//     sprintf(str, "[%f, %f]", interval->a, interval->b);
+//     return str;
+// }
 
 void intHandler(int dummy) {
     MPI_Abort(MPI_COMM_WORLD, 2);
@@ -60,7 +61,7 @@ int end_interval = 10;
 MPI_Datatype mpi_dt_message;
 
 /* Function to calculate area */
-Function f = weird1;
+Function f = exp;
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
@@ -154,7 +155,10 @@ static void master(double lower_bound, double upper_bound) {
 
         //if someone is waiting, send interval if intervals is not empty
         for (int i = 0; i < no_processes; i++) {
-            if (waiting[i] == WAITING && list_size(intervals) != 0) {
+            if (list_size(intervals) == 0) {
+                break;
+            }
+            if (waiting[i] == WAITING) {
                 Interval* itv = (Interval*)list_pop_first(intervals);
                 msg.a = itv->a;
                 msg.b = itv->b;
@@ -171,7 +175,9 @@ static void master(double lower_bound, double upper_bound) {
     }
 
     printf("Result %.25f\n", result);
-    MPI_Abort(MPI_COMM_WORLD, 0);
+    for (int i = 1; i < no_processes; i++) {
+        SEND(msg, TAG_KILL_YOURSELF, i);
+    }
 
     return;
 }
@@ -184,7 +190,10 @@ static void worker(void) {
     for(;;) {
         if (!interval) {
             SEND(msg, TAG_WANT_INTERVAL, MASTER);
-            RECEIVE(msg, TAG_RECEIVE_INTERVAL, MASTER, status);
+            RECEIVE(msg, MPI_ANY_TAG, MASTER, status);
+            if (status.MPI_TAG == TAG_KILL_YOURSELF) {
+                return;
+            }
             MALLOC(interval, Interval);
             interval->a = msg.a;
             interval->b = msg.b;
