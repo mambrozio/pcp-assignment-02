@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <mpi.h>
+#include <signal.h>
 #include <stddef.h> //ofsetof
 #include <stdio.h>
 
@@ -46,6 +47,11 @@ static const char* interval_stringfy(void* value) {
     return str;
 }
 
+void intHandler(int dummy) {
+    MPI_Abort(MPI_COMM_WORLD, 2);
+    exit(10);
+}
+
 /* Global variables */
 int rank;
 int no_processes; //need to be global so master can access to create waiting_queue
@@ -55,6 +61,7 @@ MPI_Datatype mpi_dt_message;
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
+    signal(SIGINT, intHandler);
     assert(argc == 3);
     double lower_bound = strtod(argv[1], NULL);
     double upper_bound = strtod(argv[2], NULL);
@@ -100,8 +107,8 @@ static void master(double lower_bound, double upper_bound) {
     double size = (upper_bound - lower_bound) / (no_processes - 1);
     for (int i = 0; i < no_processes - 1; i++) {
         MALLOC(interval, Interval);
-        interval->a = lower_bound + rank * size;;
-        interval->b = lower_bound + (rank + 1.0) * size;
+        interval->a = lower_bound + i * size;;
+        interval->b = lower_bound + (i + 1.0) * size;
         list_append(intervals, (ListValue)interval);
     }
 
