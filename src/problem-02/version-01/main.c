@@ -37,7 +37,7 @@ typedef struct Message {
     double res;
 } Message;
 
-static void master(double, double);
+static double master(double, double);
 static void worker(void);
 
 // static const char* interval_stringfy(void* value) {
@@ -64,6 +64,9 @@ MPI_Datatype mpi_dt_message;
 Function f = exp;
 
 int main(int argc, char** argv) {
+    double result = 0.0;
+    double t1, t2;
+
     MPI_Init(&argc, &argv);
     signal(SIGINT, intHandler);
     assert(argc == 3);
@@ -85,17 +88,24 @@ int main(int argc, char** argv) {
     MPI_Type_commit(&mpi_dt_message);
 
     if (rank == MASTER) {
-        master(lower_bound, upper_bound);
+        t1 = MPI_Wtime();
+        result = master(lower_bound, upper_bound);
+        t2 = MPI_Wtime();
     } else { /* Worker nodes */
         worker();
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
+
+    if (rank == 0) {
+        printf("%.25f;%.25f\n", result, t2 - t1);
+    }
 
     return 0;
 }
 
-static void master(double lower_bound, double upper_bound) {
+static double master(double lower_bound, double upper_bound) {
     MPI_Status status;
     unsigned waiting[no_processes];
     unsigned splits = no_processes - 1;
@@ -165,12 +175,11 @@ static void master(double lower_bound, double upper_bound) {
         }
     }
 
-    printf("Result %.25f\n", result);
     for (int i = 1; i < no_processes; i++) {
         SEND(msg, TAG_KILL_YOURSELF, i);
     }
 
-    return;
+    return result;
 }
 
 static void worker(void) {

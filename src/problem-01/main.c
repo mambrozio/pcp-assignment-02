@@ -20,7 +20,7 @@ double start, end;
 void print();
 
 int main(int argc, char** argv) {
-    GET_TIME(start);
+    double t1, t2;
 
     // arguments
     MPI_Init(&argc, &argv);
@@ -36,21 +36,17 @@ int main(int argc, char** argv) {
     double size = (upper_bound - lower_bound) / no_processes;
     double lb /* local lower bound */ = lower_bound + rank * size;
     double ub /* local upper bound */ = lower_bound + (rank + 1.0) * size;
-    double local = calculate_area_recursively(f, lb, ub, f(lb), f(ub), EPSILON);
 
-    GET_TIME(end);
+    t1 = MPI_Wtime();
+    double local = calculate_area_recursively(f, lb, ub, f(lb), f(ub), EPSILON);
     MPI_Reduce(&local, &result, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    t2 = MPI_Wtime();
 
     MPI_Finalize();
 
     if (rank == 0) {
-        printf("%.25f\n", result);
+        printf("%.25f;%.25f\n", result, t2 - t1);
     }
-    printf("Elapsed time %d: %f\n", rank, end - start);
 
     return 0;
-}
-
-void print() {
-    printf("Hello, World, I'm rank #%d of %d\n", rank, no_processes);
 }
