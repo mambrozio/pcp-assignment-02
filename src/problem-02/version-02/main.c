@@ -61,7 +61,7 @@ int end_interval = 10;
 MPI_Datatype mpi_dt_message;
 
 /* Function to calculate area */
-Function f = exp;
+Function f = weird2;
 
 int main(int argc, char** argv) {
     double result = 0.0;

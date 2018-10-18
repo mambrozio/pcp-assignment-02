@@ -32,13 +32,13 @@ p22:
 	@- $(CC) $(CFLAGS) obj/list.o obj/area.o obj/main22.o -o bin/main22
 
 run1: clean p1
-	@- mpirun -np 2 bin/main1 0 1
+	@- mpirun -np 2 bin/main1 0 7.5
 
 run21: clean p21
-	@- mpirun --oversubscribe -np 2 bin/main21 0 1 5
+	@- mpirun --oversubscribe -np 2 bin/main21 0 7.5 5
 
 run22: clean p22
-	@- mpirun --oversubscribe -np 2 bin/main22 0 1
+	@- mpirun --oversubscribe -np 2 bin/main22 0 7.5
 
 clean:
 	@- rm -f obj/*.o

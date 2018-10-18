@@ -9,3 +9,6 @@ double weird1(double x) {
     return a * b * c * d;
 }
 
+double weird2(double x) {
+    return exp(sin(x));
+}
