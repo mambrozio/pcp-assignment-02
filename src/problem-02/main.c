@@ -17,18 +17,18 @@
 #define WAITING 1
 
 // TAGS
-#define TAG_WANT_INTERVAL    3//Calculating node wants interval from master
-#define TAG_PARTIAL_RESULT   5//Calculating node sends partial result to master
-#define TAG_NEW_INTERVAL     7//Calculating node sends new interval to master
-#define TAG_RECEIVE_INTERVAL 9//Master sends new interval to calculating node
+#define TAG_WANT_INTERVAL    3 //Calculating node wants interval from master
+#define TAG_PARTIAL_RESULT   5 //Calculating node sends partial result to master
+#define TAG_NEW_INTERVAL     7 //Calculating node sends new interval to master
+#define TAG_RECEIVE_INTERVAL 9 //Master sends new interval to calculating node
 
 #define MASTER 0
 
 #define SEND(m, tag, to) \
     MPI_Send(&m, 1, mpi_dt_message, to, tag, MPI_COMM_WORLD)
 
-#define RECEIVE(m, tag, s) \
-    MPI_Recv(&m, 1, mpi_dt_message, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &s)
+#define RECEIVE(m, tag, from, s) \
+    MPI_Recv(&m, 1, mpi_dt_message, from, tag, MPI_COMM_WORLD, &s)
 
 typedef struct Message {
     double a;
@@ -54,7 +54,7 @@ void intHandler(int dummy) {
 
 /* Global variables */
 int rank;
-int no_processes; //need to be global so master can access to create waiting_queue
+int no_processes; //global so master can access to create waiting_queue
 int init_interval = 0;
 int end_interval = 10;
 MPI_Datatype mpi_dt_message;
@@ -80,9 +80,9 @@ int main(int argc, char** argv) {
     MPI_Type_create_struct(3, lengths, offsets, datatypes, &mpi_dt_message);
     MPI_Type_commit(&mpi_dt_message);
 
-    if (rank == 0) { /* Master node */
+    if (rank == MASTER) {
         master(lower_bound, upper_bound);
-    } else { /* Calculating nodes */
+    } else { /* Worker nodes */
         worker();
     }
 
@@ -116,33 +116,26 @@ static void master(double lower_bound, double upper_bound) {
 
     for(;;) {
         // Receive any tag
-        MPI_Recv(&msg, 1, mpi_dt_message, MPI_ANY_SOURCE, MPI_ANY_TAG,
-            MPI_COMM_WORLD, &status);
+        RECEIVE(msg, MPI_ANY_TAG, MPI_ANY_SOURCE, status);
 
         switch (status.MPI_TAG) {
-            //if tag is get_interval, send next interval (protect buffer?)
             case TAG_WANT_INTERVAL: {
                 int from = status.MPI_SOURCE;
-                if (list_size(intervals) == 0) { //intervals empty, put in waiting
+                if (list_size(intervals) == 0) { //intervals empty
                     waiting[from] = WAITING;
-                } else { //not empty, send interval
+                } else { //not empty
                     Interval* itv = (Interval*)list_pop_first(intervals);
                     msg.a = itv->a;
                     msg.b = itv->b;
                     msg.res = 0.0;
-                    // printf("send %f %f %f\n", msg.a, msg.b, msg.res);
-                    MPI_Send(&msg, 1, mpi_dt_message, from,
-                        TAG_RECEIVE_INTERVAL, MPI_COMM_WORLD);
+                    SEND(msg, TAG_RECEIVE_INTERVAL, from);
                 }
                 break;
             }
-            //if tag is partial_result, sum to partial result variable and sum
-            //the intervals
             case TAG_PARTIAL_RESULT:
                 result += msg.res;
                 splits--;
                 break;
-            //if tag is new_interval, insert new_interval in intervals list
             case TAG_NEW_INTERVAL: {
                 Interval* itv;
                 MALLOC(itv, Interval);
@@ -157,19 +150,17 @@ static void master(double lower_bound, double upper_bound) {
                     status.MPI_SOURCE, status.MPI_TAG);
                 break;
         }
-        //if has someone waiting, send interval is intervals not empty
+
+        //if someone is waiting, send interval if intervals is not empty
         for (int i = 0; i < no_processes; i++) {
             if (waiting[i] == WAITING && list_size(intervals) != 0) {
                 Interval* itv = (Interval*)list_pop_first(intervals);
                 msg.a = itv->a;
                 msg.b = itv->b;
                 msg.res = 0.0;
-                MPI_Send(&msg, 1, mpi_dt_message, i, TAG_RECEIVE_INTERVAL,
-                    MPI_COMM_WORLD);
+                SEND(msg, TAG_RECEIVE_INTERVAL, i);
             }
         }
-
-        // printf("splits: %d\n", splits);
 
         //if all intervals were calculated, send message to all nodes to
         //terminate
@@ -192,7 +183,7 @@ static void worker(void) {
     for(;;) {
         if (!interval) {
             SEND(msg, TAG_WANT_INTERVAL, MASTER);
-            RECEIVE(msg, TAG_RECEIVE_INTERVAL, status);
+            RECEIVE(msg, TAG_RECEIVE_INTERVAL, MASTER, status);
             MALLOC(interval, Interval);
             interval->a = msg.a;
             interval->b = msg.b;
