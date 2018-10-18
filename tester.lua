@@ -6,7 +6,7 @@ local function split(s, pattern)
 end
 
 function run(binary, num_processors, lower_bound, upper_bound, num_intervals)
-    local cmd = string.format("mpirun --oversubscribe -np %d ./bin/%s %d %d",
+    local cmd = string.format("mpirun -np %d --hostfile ./hosts ./bin/%s %d %d",
         num_processors, binary, lower_bound, upper_bound)
     if num_intervals then
         cmd = cmd .. " " .. num_intervals
@@ -49,9 +49,9 @@ local lower_bound = tests.lower_bound
 local upper_bound = tests.upper_bound
 
 --------------------------------------------------
--- 
+--
 -- Running
--- 
+--
 --------------------------------------------------
 
 os.execute("make all")
@@ -75,9 +75,9 @@ for _, procs in ipairs(t3.num_processors) do
 end
 
 --------------------------------------------------
--- 
+--
 -- Printing
--- 
+--
 --------------------------------------------------
 
 function printoutput(output)
