@@ -59,6 +59,9 @@ int init_interval = 0;
 int end_interval = 10;
 MPI_Datatype mpi_dt_message;
 
+/* Function to calculate area */
+Function f = weird1;
+
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
     signal(SIGINT, intHandler);
@@ -111,8 +114,6 @@ static void master(double lower_bound, double upper_bound) {
         interval->b = lower_bound + (i + 1.0) * size;
         list_append(intervals, (ListValue)interval);
     }
-
-    list_dump(intervals, interval_stringfy);
 
     for(;;) {
         // Receive any tag
@@ -188,7 +189,8 @@ static void worker(void) {
             interval->a = msg.a;
             interval->b = msg.b;
         }
-        double result = calculate_area_partially(exp, interval, EPSILON);
+
+        double result = calculate_area_partially(f, interval, EPSILON);
 
         if (isnan(result)) {
             double c = (interval->b + interval->a) / 2.0;
