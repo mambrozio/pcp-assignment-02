@@ -30,13 +30,13 @@ local tests = {
     problem2 = {
         version1 = {
             binary = "main21",
-            num_processors = {2, 3, 5, 9},
+            num_processors = {2, 4, 8, 16},
             num_intervals = {32, 128, 512, 1024},
             outputs = {}
         },
         version2 = {
             binary = "main22",
-            num_processors = {1, 2, 4, 8},
+            num_processors = {2, 4, 8, 16},
             outputs = {}
         }
     }
@@ -69,6 +69,11 @@ for i, procs in ipairs(t2.num_processors) do
     end
 end
 
+for _, procs in ipairs(t3.num_processors) do
+    local output = run(t3.binary, procs, lower_bound, upper_bound)
+    table.insert(t3.outputs, output)
+end
+
 --------------------------------------------------
 -- 
 -- Printing
@@ -76,8 +81,12 @@ end
 --------------------------------------------------
 
 function printoutput(output)
-    print("Result:\t" .. output.result)
-    print("Time:\t" .. output.delta)
+    if output.result and output.delta then
+        print("Result:\t" .. output.result)
+        print("Time:\t" .. output.delta)
+    else
+        print("No output")
+    end
 end
 
 print("-------------------- Problem 01")
@@ -87,13 +96,19 @@ for i, output in ipairs(t1.outputs) do
 end
 
 print("-------------------- Problem 02 [version 1]")
-for i in ipairs(t1.outputs) do
-    for j in ipairs(t1.outputs[i]) do
-        local output = t1.outputs[i][j]
+for i in ipairs(t2.outputs) do
+    for j in ipairs(t2.outputs[i]) do
+        local output = t2.outputs[i][j]
         print("----- " ..
             t2.num_processors[i] .. " processors - " ..
             t2.num_intervals[j] .. " intervals"
         )
         printoutput(output)
     end
+end
+
+print("-------------------- Problem 02 [version 2]")
+for i, output in ipairs(t3.outputs) do
+    print("----- " .. t3.num_processors[i] .. " processors")
+    printoutput(output)
 end
