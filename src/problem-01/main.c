@@ -1,15 +1,14 @@
 #include <assert.h>
 #include <math.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include "mpi.h"
+#include "../area.h"
+#include "../timer.h"
 
-#include "area.h"
-#include "timer.h"
-
-#include "weird.c"
+#include "../weird.c"
 
 #define EPSILON 0.0000000000000001
 
