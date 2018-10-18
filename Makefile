@@ -3,11 +3,16 @@
 #
 
 CC := mpicc
+CFLAGS := -Wall
 
-CFLAGS := -Wall -lm
+ifeq ($(shell uname -s), Linux)
+	CFLAGS += -lm
+endif
 
 main:
-	@- echo "usage:\n\tmake p1|p2"
+	@- echo "usage:\n\tmake p1|p21|p22|all"
+
+all: p1 p21 p22
 
 p1:
 	@- $(CC) $(CFLAGS) -c src/area.c -o obj/area.o
