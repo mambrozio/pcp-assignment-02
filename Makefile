@@ -35,7 +35,7 @@ run1: clean p1
 	@- mpirun -np 2 bin/main1 0 1
 
 run21: clean p21
-	@- mpirun --oversubscribe -np 2 bin/main21 0 1
+	@- mpirun --oversubscribe -np 2 bin/main21 0 1 5
 
 run22: clean p22
 	@- mpirun --oversubscribe -np 2 bin/main22 0 1

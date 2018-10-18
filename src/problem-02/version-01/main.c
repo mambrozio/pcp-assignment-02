@@ -37,7 +37,7 @@ typedef struct Message {
     double res;
 } Message;
 
-static double master(double, double);
+static double master(double, double, double);
 static void worker(void);
 
 // static const char* interval_stringfy(void* value) {
@@ -69,9 +69,10 @@ int main(int argc, char** argv) {
 
     MPI_Init(&argc, &argv);
     signal(SIGINT, intHandler);
-    assert(argc == 3);
+    assert(argc == 4);
     double lower_bound = strtod(argv[1], NULL);
     double upper_bound = strtod(argv[2], NULL);
+    double no_intervals = strtod(argv[3], NULL);
 
     MPI_Comm_size(MPI_COMM_WORLD, &no_processes);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
 
     if (rank == MASTER) {
         t1 = MPI_Wtime();
-        result = master(lower_bound, upper_bound);
+        result = master(lower_bound, upper_bound, no_intervals);
         t2 = MPI_Wtime();
     } else { /* Worker nodes */
         worker();
@@ -105,10 +106,10 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-static double master(double lower_bound, double upper_bound) {
+static double master(double lower_bound, double upper_bound, double no_intervals) {
     MPI_Status status;
     unsigned waiting[no_processes];
-    unsigned splits = no_processes - 1;
+    unsigned splits = no_intervals;
     Message msg;
     List* intervals = list_new();
     Interval* interval;
@@ -118,8 +119,8 @@ static double master(double lower_bound, double upper_bound) {
         waiting[i] = NOT_WAITING;
     }
 
-    double size = (upper_bound - lower_bound) / (no_processes - 1);
-    for (int i = 0; i < no_processes - 1; i++) {
+    double size = (upper_bound - lower_bound) / (no_intervals);
+    for (int i = 0; i < no_intervals; i++) {
         MALLOC(interval, Interval);
         interval->a = lower_bound + i * size;;
         interval->b = lower_bound + (i + 1.0) * size;
