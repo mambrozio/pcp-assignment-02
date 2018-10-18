@@ -179,6 +179,8 @@ static void master(double lower_bound, double upper_bound) {
     }
 
     printf("Result %.25f\n", result);
+    MPI_Abort(MPI_COMM_WORLD, 0);
+
     return;
 }
 
@@ -198,15 +200,12 @@ static void worker(void) {
         double result = calculate_area_partially(exp, interval, EPSILON);
 
         if (isnan(result)) {
-            //printf("INFINITY\n");
             double c = (interval->b + interval->a) / 2.0;
             msg.a = c;
             msg.b = interval->b;
-            // printf("send %f %f %f\n", msg.a, msg.b, msg.res);
             SEND(msg, TAG_NEW_INTERVAL, MASTER);
             interval->b = c;
         } else {
-            // printf("NOT INFINITY\n");
             msg.res = result;
             SEND(msg, TAG_PARTIAL_RESULT, MASTER);
             free(interval);

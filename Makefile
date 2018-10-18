@@ -19,12 +19,12 @@ p2:
 	@- $(CC) $(CFLAGS) -c src/problem-02/list.c -o obj/list.o
 	@- $(CC) $(CFLAGS) -c src/problem-02/main.c -o obj/main2.o
 	@- $(CC) $(CFLAGS) obj/list.o obj/area.o obj/main2.o -o bin/main2
-	
+
 run1: clean p1
 	@- mpirun -np 2 bin/main1 -3 2
 
 run2: clean p2
-	@- mpirun --oversubscribe -np 2 bin/main2 -3 2
+	@- mpirun --oversubscribe -np 4 bin/main2 -3 2
 
 clean:
 	@- rm -f obj/*.o
