@@ -55,6 +55,9 @@ local upper_bound = tests.upper_bound
 --------------------------------------------------
 
 os.execute("make all")
+os.execute("mrcp all bin/main1 /bin/main1")
+os.execute("mrcp all bin/main21 /bin/main21")
+os.execute("mrcp all bin/main22 /bin/main22")
 
 for _, procs in ipairs(t1.num_processors) do
     local output = run(t1.binary, procs, lower_bound, upper_bound)
