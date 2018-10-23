@@ -6,7 +6,8 @@ local function split(s, pattern)
 end
 
 function run(binary, num_processors, lower_bound, upper_bound, num_intervals)
-    local cmd = string.format("mpirun -np %d --hostfile ./hosts ./bin/%s %d %d",
+    -- string.format("mpirun -np %d --hostfile ./hosts ./bin/%s %d %d",
+    local cmd = string.format("mpirun -np %d ./bin/%s %d %d",
         num_processors, binary, lower_bound, upper_bound)
     if num_intervals then
         cmd = cmd .. " " .. num_intervals
@@ -20,8 +21,7 @@ function run(binary, num_processors, lower_bound, upper_bound, num_intervals)
 end
 
 local tests = {
-    lower_bound = -5,
-    upper_bound = 5,
+    interval = {-5, 5},
     problem1 = {
         binary = "main1",
         num_processors = {1, 2, 4, 8},
@@ -45,8 +45,8 @@ local tests = {
 local t1 = tests.problem1
 local t2 = tests.problem2.version1
 local t3 = tests.problem2.version2
-local lower_bound = tests.lower_bound
-local upper_bound = tests.upper_bound
+local lower_bound = tests.interval[0]
+local upper_bound = tests.interval[1]
 
 --------------------------------------------------
 --

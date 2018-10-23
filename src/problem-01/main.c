@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     // everyone executes the same function
-    Function f = weird2;
+    Function f = weird1;
     double size = (upper_bound - lower_bound) / no_processes;
     double lb /* local lower bound */ = lower_bound + rank * size;
     double ub /* local upper bound */ = lower_bound + (rank + 1.0) * size;
