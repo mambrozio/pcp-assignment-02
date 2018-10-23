@@ -16,7 +16,7 @@ function run(binary, num_processors, lower_bound, upper_bound, num_intervals)
     local pipe = assert(io.popen(cmd, "r"))
     local output = split(pipe:read("*all"), ";")
     pipe:close()
-    output = {result = output[1], delta = output[2]}
+    output = {result = tonumber(output[1]), delta = tonumber(output[2])}
     return output
 end
 
@@ -24,20 +24,17 @@ local tests = {
     interval = {-5, 5},
     problem1 = {
         binary = "main1",
-        num_processors = {1, 2, 4, 8},
-        outputs = {}
+        num_processors = {1, 2, 4, 8}
     },
     problem2 = {
         version1 = {
             binary = "main21",
             num_processors = {2, 4, 8, 16},
-            num_intervals = {32, 128, 512, 1024},
-            outputs = {}
+            num_intervals = {32, 128, 512, 1024}
         },
         version2 = {
             binary = "main22",
-            num_processors = {2, 4, 8, 16},
-            outputs = {}
+            num_processors = {2, 4, 8, 16}
         }
     }
 }
@@ -45,8 +42,8 @@ local tests = {
 local t1 = tests.problem1
 local t2 = tests.problem2.version1
 local t3 = tests.problem2.version2
-local lower_bound = tests.interval[0]
-local upper_bound = tests.interval[1]
+local lower_bound = tests.interval[1]
+local upper_bound = tests.interval[2]
 
 --------------------------------------------------
 --
@@ -55,26 +52,36 @@ local upper_bound = tests.interval[1]
 --------------------------------------------------
 
 os.execute("make all")
-os.execute("mrcp all bin/main1 /bin/main1")
-os.execute("mrcp all bin/main21 /bin/main21")
-os.execute("mrcp all bin/main22 /bin/main22")
+if arg[1] == "copy" then
+    os.execute("mrcp all bin/main1 /bin/main1")
+    os.execute("mrcp all bin/main21 /bin/main21")
+    os.execute("mrcp all bin/main22 /bin/main22")
+end
 
-for _, procs in ipairs(t1.num_processors) do
+local results = {
+    {"", "1", "21-32", "21-128", "21-512", "21-1024", "22"},
+    {1,  "-", "-", "-", "-", "-", "-"},
+    {2,  "-", "-", "-", "-", "-", "-"},
+    {4,  "-", "-", "-", "-", "-", "-"},
+    {8,  "-", "-", "-", "-", "-", "-"},
+    {16, "-", "-", "-", "-", "-", "-"},
+}
+
+for i, procs in ipairs(t1.num_processors) do
     local output = run(t1.binary, procs, lower_bound, upper_bound)
-    table.insert(t1.outputs, output)
+    results[i + 1][2] = output
 end
 
 for i, procs in ipairs(t2.num_processors) do
-    table.insert(t2.outputs, {})
     for j, itvs in ipairs(t2.num_intervals) do
         local output = run(t2.binary, procs, lower_bound, upper_bound, itvs)
-        table.insert(t2.outputs[i], output)
+        results[i + 2][j + 2] = output
     end
 end
 
-for _, procs in ipairs(t3.num_processors) do
+for i, procs in ipairs(t3.num_processors) do
     local output = run(t3.binary, procs, lower_bound, upper_bound)
-    table.insert(t3.outputs, output)
+    results[i + 2][7] = output
 end
 
 --------------------------------------------------
@@ -83,35 +90,17 @@ end
 --
 --------------------------------------------------
 
-function printoutput(output)
-    if output.result and output.delta then
-        print("Result:\t" .. output.result)
-        print("Time:\t" .. output.delta)
+function stringfy_output(output)
+    if type(output) == "table" then
+        return string.format("%.3f", output.delta or "0.0")
     else
-        print("No output")
+        return output
     end
 end
 
-print("-------------------- Problem 01")
-for i, output in ipairs(t1.outputs) do
-    print("----- " .. t1.num_processors[i] .. " processors")
-    printoutput(output)
-end
-
-print("-------------------- Problem 02 [version 1]")
-for i in ipairs(t2.outputs) do
-    for j in ipairs(t2.outputs[i]) do
-        local output = t2.outputs[i][j]
-        print("----- " ..
-            t2.num_processors[i] .. " processors - " ..
-            t2.num_intervals[j] .. " intervals"
-        )
-        printoutput(output)
+for i = 1, 6 do
+    for j = 1, 7 do
+        io.write(stringfy_output(results[i][j]) .. "\t")
     end
-end
-
-print("-------------------- Problem 02 [version 2]")
-for i, output in ipairs(t3.outputs) do
-    print("----- " .. t3.num_processors[i] .. " processors")
-    printoutput(output)
+    io.write("\n")
 end
