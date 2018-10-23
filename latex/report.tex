@@ -1,0 +1,52 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1in]{geometry} 
+\usepackage[table,xcdraw]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{graphicx}
+
+\def\code#1{\texttt{#1}}
+ 
+\begin{document}
+ 
+\title{PCP - Trabalho 3}
+\author{Matheus Ambrozio \& Renan Almeida}
+ 
+\maketitle
+
+O trabalho foi desenvolvido conforme a especificação. A três diferentes versões do código podem ser encontradas na pasta \code{/src} em \code{/problem-01}, \code{/problem-02/version-01}, e \code{/problem-02/version-02}.
+
+As funções usadas para teste estão definidas em \code{/src/weird.c}. A função \code{weird1} é bastante lenta, portanto, usamos a função \code{weird2} para as medições. Para ambas as funções, calculamos a área usando o mesmo intervalo [-5,~5]. As funções matemáticas correspondentes são:
+
+\begin{align}
+& f1(x) = (x - 1) * (x + 3)^2 * (x - 2)^3 * (x + 1)^4 \\
+& f2(x) = e^{sin(x)}
+\end{align}
+
+Realizamos os testes e medições somente no nó mestre do cluster (devido aos problemas de execução já discutidos). Como esse nó só possui 4 núcleos, os testes com \code{-np} maior que 4 não puderam ser propriamente avaliados.
+
+As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a tabela com os resultados das medições. A coluna na esquerda (1, 2, 4, 8, 16) indica o número usado para~\code{-np}. A linha superior indica a qual das versões do trabalho pertence a medição. No caso da primeira versão do segundo problema, o número de sub-intervalos (32, 128, 512, 1024) está indicado entre parenteses.
+
+\begin{table}[h]
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+    { }                     &
+    {\textbf{P1}}           &
+    {\textbf{P2-V1 (32)}}   &
+    {\textbf{P2-V1 (128)}}  &
+    {\textbf{P2-V1 (512)}}  &
+    {\textbf{P2-V1 (1024)}} &
+    {\textbf{P2-V2}}        \\
+\hline
+{\textbf{1}}  & 0.231   & -     & -     & -     & -     & -      \\ \hline
+{\textbf{2}}  & 0.130   & 0.232 & 0.246 & 0.247 & 0.194 & 4.673  \\ \hline
+{\textbf{4}}  & 0.069   & 0.075 & 0.070 & 0.066 & 0.070 & 2.155  \\ \hline
+{\textbf{8}}  & 0.097   & 0.106 & 0.163 & 0.181 & 0.211 & 4.983  \\ \hline
+{\textbf{16}} & -       & 0.114 & 0.153 & 0.248 & 0.282 & 11.496 \\ \hline
+\end{tabular}
+\end{table}
+
+A execução mais rápida foi o \textbf{P2-V1 (512)}, terminando em 0.066 segundos. Percebemos que todas as versões executam com tempo semelhante para \code{-np} 4, a exceção da \textbf{P2-V2}. Acreditamos que a quantidade elevada de troca de mensagens, aliada ao baixo número de \code{workers}, sejam causa parcial para essas medições mais lentas. Para investigar melhor, gostaríamos de testar os mesmo problema usando vários nós com vários núcleos.
+
+\end{document}
