@@ -1,34 +1,33 @@
 \documentclass[12pt]{article}
 
-\usepackage[margin=1in]{geometry} 
+\usepackage[margin=1in]{geometry}
 \usepackage[table,xcdraw]{xcolor}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amsthm,amssymb}
 \usepackage{graphicx}
 
 \def\code#1{\texttt{#1}}
- 
+
 \begin{document}
- 
+
 \title{PCP - Trabalho 2}
 \author{Matheus Ambrozio \& Renan Almeida}
- 
+
 \maketitle
 
 O trabalho foi desenvolvido conforme a especificação. A três diferentes versões do código podem ser encontradas na pasta \code{/src} em \code{/problem-01}, \code{/problem-02/version-01}, e \code{/problem-02/version-02}.
 
-As funções usadas para teste estão definidas em \code{/src/weird.c}. A função \code{weird1} é bastante lenta, portanto, usamos a função \code{weird2} para as medições. Para ambas as funções, calculamos a área usando o mesmo intervalo [-5,~5]. As funções matemáticas correspondentes são:
+A função usada para teste está definida em \code{/src/weird.c}. Utilizamos a função weird1 para os testes. Calculamos a área usando o intervalo [-3,~3]. A função matemática correspondentes é:
 
 \begin{align}
-& f1(x) = (x - 1) * (x + 3)^2 * (x - 2)^3 * (x + 1)^4 \\
-& f2(x) = e^{sin(x)}
+& f1(x) = (x - 1) * (x + 3)^2 * (x - 2)^3 * (x + 1)^4
 \end{align}
 
 \section*{Medições}
 
-Realizamos os testes e medições somente no nó mestre do cluster (devido aos problemas de execução já discutidos). Como esse nó só possui 4 núcleos, os testes com \code{-np} maior que 4 não puderam ser propriamente avaliados. As medições são geradas através da execução do script \code{tester.lua}.
+Realizamos os testes nos nós n00-n07, cada nó com 4 núcleos e possibilidade de conter no máximo 4 processos. As medições são geradas através da execução do script \code{tester.lua}.
 
-As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a tabela com os resultados em segundos. A coluna na esquerda (1, 2, 4, 8, 16) indica o número usado para~\code{-np}. A linha superior indica a qual das versões do trabalho pertence a medição. No caso da primeira versão do segundo problema, o número de sub-intervalos (32, 128, 512, 1024) está indicado entre parenteses.
+As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a tabela com os resultados em segundos. A coluna na esquerda (1, 2, 4, 8, 16) indica o número usado para~\code{-n}. A linha superior indica a qual das versões do trabalho pertence a medição. No caso da primeira versão do segundo problema, o número de sub-intervalos (32, 128, 512, 1024) está indicado entre parenteses.
 
 \begin{table}[h]
 \begin{tabular}{|c|c|c|c|c|c|c|}
@@ -41,26 +40,28 @@ As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a 
     {\textbf{P2-V1 (1024)}} &
     {\textbf{P2-V2}}        \\
 \hline
-{\textbf{1}}  & 0.231   & -     & -     & -     & -     & -      \\ \hline
-{\textbf{2}}  & 0.130   & 0.232 & 0.246 & 0.247 & 0.194 & 4.673  \\ \hline
-{\textbf{4}}  & 0.069   & 0.075 & 0.070 & 0.066 & 0.070 & 2.155  \\ \hline
-{\textbf{8}}  & 0.097   & 0.106 & 0.163 & 0.181 & 0.211 & 4.983  \\ \hline
-{\textbf{16}} & -       & 0.114 & 0.153 & 0.248 & 0.282 & 11.496 \\ \hline
+{\textbf{1}}  & 4.628   & -     & -     & -     & -     & -       \\ \hline
+{\textbf{2}}  & 3.376   & 5.116	& 5.295	& 5.311	& 4.576	& 35.040  \\ \hline
+{\textbf{4}}  & 2.626   & 1.825	& 1.631	& 1.877	& 1.840	& 14.191  \\ \hline
+{\textbf{8}}  & 2.025   & 1.166	& 0.860	& 0.770	& 0.803	& 59.562  \\ \hline
+{\textbf{16}} & -       & 1.028	& 0.697	& 0.532	& 0.468	& 154.004 \\ \hline
 \end{tabular}
 \end{table}
 
-A execução mais rápida foi o \textbf{P2-V1 (512)}, terminando em 0.066 segundos. Percebemos que todas as versões executam com tempo semelhante para \code{-np} 4, a exceção da \textbf{P2-V2}. Acreditamos que a quantidade elevada de troca de mensagens, aliada ao baixo número de \code{workers}, sejam causa parcial para essas medições mais lentas. Para investigar melhor, gostaríamos de testar os mesmo problema usando vários nós com vários núcleos.
+A execução mais rápida foi o \textbf{P2-V1 (1024)}, terminando em 0.468 segundos, que é a que mais divide o intervalo à ser calculado, tornando os trabalhos de cada nó mais fáceis. Vemos que os piores tempos de execução são do programa utilizando a solução do problema 2 versão 2, onde há mais troca de mensagens entre os nós.
 
 \section*{Desenvolvimento}
 
 O código do trabalho está dividido entre três diferentes arquivos \code{main.c}, contendo as diferentes versões do programa.
 
-\begin{itemize}  
+\begin{itemize}
 \item Para \textbf{P1}, o programa faz apenas um \code{MPI\_Reduce} para sincronizar os dados e calcular a área total. Sua implementação é bem simples.
 
 \item Para \textbf{P2-V1}, nós mantemos no nó mestre uma lista de intervalos a serem calculados, que é esvaziada conforme nós trabalhadores requisitam novos intervalos para calcular. O programa termina quando o contador \code{splits}, que supervisiona a quantidade de intervalos calculados, chega a zero.
 
 \item Para \textbf{P2-V2}, a lógica é similar à da versão anterior, com a diferença da existência de um novo tipo de mensagem \code{NEW\_INTERVAL}, que incrementa a variável \code{splits} e adiciona um novo intervalo na lista do nó mestre. Essa mensagem é enviada por um nó trabalhador quando ele divide um intervalo em dois.
 \end{itemize}
+
+O código se encontra em: \textit{https://github.com/mambrozio/pcp-assignment-02}
 
 \end{document}
