@@ -7,7 +7,7 @@ end
 
 function run(binary, num_processors, lower_bound, upper_bound, num_intervals)
     -- string.format("mpirun -np %d --hostfile ./hosts ./bin/%s %d %d",
-    local cmd = string.format("mpirun -np %d ./bin/%s %d %d",
+    local cmd = string.format("mpirun -np %d -f ./hosts ./bin/%s %d %d",
         num_processors, binary, lower_bound, upper_bound)
     if num_intervals then
         cmd = cmd .. " " .. num_intervals
@@ -51,6 +51,7 @@ local upper_bound = tests.interval[2]
 --
 --------------------------------------------------
 
+os.execute("make clean")
 os.execute("make all")
 if arg[1] == "copy" then
     os.execute("mrcp all bin/main1 /bin/main1")
