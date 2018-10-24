@@ -155,26 +155,26 @@ static double master(double lower_bound, double upper_bound) {
                 itv->b = msg.b;
                 list_append(intervals, (ListValue)itv);
                 splits++;
+
+                //if someone is waiting, send interval if intervals is not empty
+                for (int i = 0; i < no_processes; i++) {
+                    if (list_size(intervals) == 0) {
+                        break;
+                    }
+                    if (waiting[i] == WAITING) {
+                        Interval* itv = (Interval*)list_pop_first(intervals);
+                        msg.a = itv->a;
+                        msg.b = itv->b;
+                        msg.res = 0.0;
+                        SEND(msg, TAG_RECEIVE_INTERVAL, i);
+                    }
+                }
                 break;
             }
             default:
                 fprintf(stderr, "Node %d sent unknown tag %d\n",
                     status.MPI_SOURCE, status.MPI_TAG);
                 break;
-        }
-
-        //if someone is waiting, send interval if intervals is not empty
-        for (int i = 0; i < no_processes; i++) {
-            if (list_size(intervals) == 0) {
-                break;
-            }
-            if (waiting[i] == WAITING) {
-                Interval* itv = (Interval*)list_pop_first(intervals);
-                msg.a = itv->a;
-                msg.b = itv->b;
-                msg.res = 0.0;
-                SEND(msg, TAG_RECEIVE_INTERVAL, i);
-            }
         }
 
         //if all intervals were calculated, send message to all nodes to
@@ -196,14 +196,16 @@ static void worker(void) {
     Message msg;
     MPI_Status status;
 
+    MALLOC(interval, Interval);
+    interval->a = NAN;
+
     for(;;) {
-        if (!interval) {
+        if (isnan(interval->a)) {
             SEND(msg, TAG_WANT_INTERVAL, MASTER);
             RECEIVE(msg, MPI_ANY_TAG, MASTER, status);
             if (status.MPI_TAG == TAG_KILL_YOURSELF) {
                 return;
             }
-            MALLOC(interval, Interval);
             interval->a = msg.a;
             interval->b = msg.b;
         }
@@ -219,8 +221,7 @@ static void worker(void) {
         } else {
             msg.res = result;
             SEND(msg, TAG_PARTIAL_RESULT, MASTER);
-            free(interval);
-            interval = NULL;
+            interval->a = NAN;
         }
     }
 
