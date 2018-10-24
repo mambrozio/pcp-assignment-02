@@ -51,13 +51,13 @@ local upper_bound = tests.interval[2]
 --
 --------------------------------------------------
 
-os.execute("make clean")
-os.execute("make all")
-if arg[1] == "copy" then
-    os.execute("mrcp all bin/main1 /bin/main1")
-    os.execute("mrcp all bin/main21 /bin/main21")
-    os.execute("mrcp all bin/main22 /bin/main22")
-end
+--os.execute("make clean")
+--os.execute("make all")
+--if arg[1] == "copy" then
+--    os.execute("mrcp all bin/main1 /bin/main1")
+--    os.execute("mrcp all bin/main21 /bin/main21")
+--    os.execute("mrcp all bin/main22 /bin/main22")
+--end
 
 local results = {
     {"", "1", "21-32", "21-128", "21-512", "21-1024", "22"},
