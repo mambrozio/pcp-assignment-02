@@ -65,7 +65,8 @@ Function f = weird1;
 
 int main(int argc, char** argv) {
     double result = 0.0;
-    double t1, t2;
+    double t1 = 0.0;
+    double t2 = 0.0;
 
     MPI_Init(&argc, &argv);
     signal(SIGINT, intHandler);

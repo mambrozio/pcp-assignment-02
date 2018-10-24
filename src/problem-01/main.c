@@ -20,7 +20,8 @@ double start, end;
 void print();
 
 int main(int argc, char** argv) {
-    double t1, t2;
+    double t1 = 0.0;
+    double t2 = 0.0;
 
     // arguments
     MPI_Init(&argc, &argv);
