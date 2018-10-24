@@ -24,9 +24,11 @@ As funções usadas para teste estão definidas em \code{/src/weird.c}. A funç�
 & f2(x) = e^{sin(x)}
 \end{align}
 
-Realizamos os testes e medições somente no nó mestre do cluster (devido aos problemas de execução já discutidos). Como esse nó só possui 4 núcleos, os testes com \code{-np} maior que 4 não puderam ser propriamente avaliados.
+\section*{Medições}
 
-As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a tabela com os resultados das medições. A coluna na esquerda (1, 2, 4, 8, 16) indica o número usado para~\code{-np}. A linha superior indica a qual das versões do trabalho pertence a medição. No caso da primeira versão do segundo problema, o número de sub-intervalos (32, 128, 512, 1024) está indicado entre parenteses.
+Realizamos os testes e medições somente no nó mestre do cluster (devido aos problemas de execução já discutidos). Como esse nó só possui 4 núcleos, os testes com \code{-np} maior que 4 não puderam ser propriamente avaliados. As medições são geradas através da execução do script \code{tester.lua}.
+
+As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a tabela com os resultados em segundos. A coluna na esquerda (1, 2, 4, 8, 16) indica o número usado para~\code{-np}. A linha superior indica a qual das versões do trabalho pertence a medição. No caso da primeira versão do segundo problema, o número de sub-intervalos (32, 128, 512, 1024) está indicado entre parenteses.
 
 \begin{table}[h]
 \begin{tabular}{|c|c|c|c|c|c|c|}
@@ -48,5 +50,17 @@ As medições foram feitas usando a função \code{MPI\_Wtime}. Abaixo, temos a 
 \end{table}
 
 A execução mais rápida foi o \textbf{P2-V1 (512)}, terminando em 0.066 segundos. Percebemos que todas as versões executam com tempo semelhante para \code{-np} 4, a exceção da \textbf{P2-V2}. Acreditamos que a quantidade elevada de troca de mensagens, aliada ao baixo número de \code{workers}, sejam causa parcial para essas medições mais lentas. Para investigar melhor, gostaríamos de testar os mesmo problema usando vários nós com vários núcleos.
+
+\section*{Desenvolvimento}
+
+O código do trabalho está dividido entre três diferentes arquivos \code{main.c}, contendo as diferentes versões do programa.
+
+\begin{itemize}  
+\item Para \textbf{P1}, o programa faz apenas um \code{MPI\_Reduce} para sincronizar os dados e calcular a área total. Sua implementação é bem simples.
+
+\item Para \textbf{P2-V1}, nós mantemos no nó mestre uma lista de intervalos a serem calculados, que é esvaziada conforme nós trabalhadores requisitam novos intervalos para calcular. O programa termina quando o contador \code{splits}, que supervisiona a quantidade de intervalos calculados, chega a zero.
+
+\item Para \textbf{P2-V2}, a lógica é similar à da versão anterior, com a diferença da existência de um novo tipo de mensagem \code{NEW\_INTERVAL}, que incrementa a variável \code{splits} e adiciona um novo intervalo na lista do nó mestre. Essa mensagem é enviada por um nó trabalhador quando ele divide um intervalo em dois.
+\end{itemize}
 
 \end{document}
